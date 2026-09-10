@@ -1,0 +1,11 @@
+name: 'oulad'
+version: '1.0.0'
+
+profile: 'oulad'
+
+model-paths: ["models"]
+
+models:
+  oulad:
+    mart:
+      +materialized: table

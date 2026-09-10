@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: clean
+    catalog: ftw-week-07
+    schema: 02-clean
+    tables:
+      - name: assessments
+      - name: courses
+      - name: student_assessment
+      - name: student_info
+      - name: student_registration
+      - name: student_vle
+      - name: vle
