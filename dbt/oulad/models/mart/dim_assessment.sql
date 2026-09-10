@@ -12,7 +12,7 @@ SELECT
     a.code_module,
     a.code_presentation,
     a.assessment_type,
-    a.date,
+    a.due_day_offset,
     a.weight
 
 FROM {{ source('clean', 'assessments') }} a
