@@ -15,7 +15,7 @@ SELECT
     sa.is_banked,
     sa.score
 FROM `ftw-week-07`.`02-clean`.student_assessment sa
-INNER JOIN `ftw-week-07`.`03-mart`.dim_assessment da
+LEFT JOIN `ftw-week-07`.`03-mart`.dim_assessment da
     ON sa.id_assessment = da.id_assessment
 LEFT JOIN `ftw-week-07`.`03-mart`.dim_student_enrollment se
     ON sa.id_student        = se.id_student
