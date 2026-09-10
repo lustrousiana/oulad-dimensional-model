@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: dim_student_enrollment
+    description: One row per student per course presentation.
+    columns:
+      - name: student_enrollment_key
+        tests:
+          - not_null
+          - unique
+
+      - name: id_student
+        tests:
+          - not_null
+
+      - name: code_module
+        tests:
+          - not_null
+
+      - name: code_presentation
+        tests:
+          - not_null
+
+  - name: dim_assessment
+    description: One row per assessment.
+    columns:
+      - name: assessment_key
+        tests:
+          - not_null
+          - unique
+
+      - name: id_assessment
+        tests:
+          - not_null
+          - unique
+
+  - name: dim_site
+    description: One row per VLE site and activity.
+    columns:
+      - name: site_key
+        tests:
+          - not_null
+          - unique
+
+  - name: fact_assessment
+    description: One row per student enrollment per assessment.
+    columns:
+      - name: fact_assessment_key
+        tests:
+          - not_null
+          - unique
+
+  - name: fact_activity
+    description: One row per student enrollment per site activity.
+    columns:
+      - name: fact_activity_key
+        tests:
+          - not_null
+          - unique
