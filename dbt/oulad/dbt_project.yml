@@ -9,4 +9,3 @@ models:
   oulad:
     mart:
       +materialized: table
-      +schema: 03-mart
