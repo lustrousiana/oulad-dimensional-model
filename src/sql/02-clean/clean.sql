@@ -16,6 +16,7 @@ COMMENT 'Silver layer. Cleaned and typed data with quality flags.';
 -- Issues addressed:
 --   - 12 '?' values in date field converted to NULL
 --   - Renamed 'date' to 'due_day_offset' for clarity (negative values are valid offsets)
+--   - Added has_invalid_weight_sum flag to track 5 presentations with weights ≠ 100%
 --   - All validation checks passed (no duplicates, valid ranges, referential integrity)
 
 CREATE OR REPLACE TABLE `ftw-week-07`.`02-clean`.assessments (
@@ -25,22 +26,43 @@ CREATE OR REPLACE TABLE `ftw-week-07`.`02-clean`.assessments (
     assessment_type STRING COMMENT 'Type: CMA, TMA, or Exam',
     due_day_offset INT COMMENT 'Day offset from course start when assessment is due (can be negative; NULL if unknown)',
     weight DOUBLE COMMENT 'Assessment weight in final grade (0-100)',
-    has_missing_due_date BOOLEAN COMMENT 'Data quality flag: TRUE if due date was missing in source'
+    has_missing_due_date BOOLEAN COMMENT 'Data quality flag: TRUE if due date was missing in source',
+    has_invalid_weight_sum BOOLEAN COMMENT 'Data quality flag: TRUE if presentation total weights ≠ 100%'
 )
 COMMENT 'Clean assessment definitions with data quality flags';
 
 INSERT INTO `ftw-week-07`.`02-clean`.assessments
+WITH presentation_weight_validation AS (
+    -- Calculate total weights by presentation and type to identify invalid sums
+    SELECT 
+        code_module,
+        code_presentation,
+        assessment_type,
+        SUM(weight) as total_weight
+    FROM `ftw-week-07`.`01-raw`.assessments
+    GROUP BY code_module, code_presentation, assessment_type
+)
 SELECT 
-    id_assessment,
-    code_module,
-    code_presentation,
-    assessment_type,
+    a.id_assessment,
+    a.code_module,
+    a.code_presentation,
+    a.assessment_type,
     -- Transform: Convert string to INT, '?' becomes NULL, invalid values also become NULL via TRY_CAST
-    CASE WHEN date = '?' THEN NULL ELSE TRY_CAST(date AS INT) END AS due_day_offset,
-    weight,
+    CASE WHEN a.date = '?' THEN NULL ELSE TRY_CAST(a.date AS INT) END AS due_day_offset,
+    a.weight,
     -- Quality Flag: Track if source explicitly marked as missing with '?' (not other corrupt values)
-    CASE WHEN date = '?' THEN TRUE ELSE FALSE END AS has_missing_due_date
-FROM `ftw-week-07`.`01-raw`.assessments;
+    CASE WHEN a.date = '?' THEN TRUE ELSE FALSE END AS has_missing_due_date,
+    -- Quality Flag: Track if this assessment belongs to a presentation with invalid weight sum
+    CASE 
+        WHEN pwv.total_weight IS NULL THEN FALSE
+        WHEN ABS(pwv.total_weight - 100.0) > 0.01 THEN TRUE
+        ELSE FALSE
+    END AS has_invalid_weight_sum
+FROM `ftw-week-07`.`01-raw`.assessments a
+LEFT JOIN presentation_weight_validation pwv
+    ON a.code_module = pwv.code_module
+   AND a.code_presentation = pwv.code_presentation
+   AND a.assessment_type = pwv.assessment_type;
 
 
 -- ============================================================================
@@ -114,6 +136,7 @@ LEFT JOIN `ftw-week-07`.`02-clean`.assessments a
 -- Issues addressed:
 --   - 1,111 '?' values in imd_band converted to NULL
 --   - 3,516 '10-20' values standardized to '10-20%' (format consistency)
+--   - 102 withdrawal flag inconsistencies resolved (date_unregistration used as authoritative source)
 --   - Standardized categorical values to uppercase
 --   - Added data quality flag for missing deprivation band
 
@@ -130,32 +153,48 @@ CREATE OR REPLACE TABLE `ftw-week-07`.`02-clean`.student_info (
     studied_credits INT COMMENT 'Total credits studied (30-655)',
     disability STRING COMMENT 'Has disability (Y or N)',
     final_result STRING COMMENT 'Course outcome (Pass, Fail, Distinction, Withdrawn)',
-    has_missing_imd_band BOOLEAN COMMENT 'Data quality flag: TRUE if deprivation band unknown'
+    has_missing_imd_band BOOLEAN COMMENT 'Data quality flag: TRUE if deprivation band unknown',
+    had_withdrawal_corrected BOOLEAN COMMENT 'Data quality flag: TRUE if final_result was corrected using date_unregistration'
 )
 COMMENT 'Clean student demographic and outcome data with data quality flags';
 
 INSERT INTO `ftw-week-07`.`02-clean`.student_info
 SELECT 
-    id_student,
-    code_module,
-    code_presentation,
-    UPPER(gender) AS gender,
-    region,
-    highest_education,
+    si.id_student,
+    si.code_module,
+    si.code_presentation,
+    UPPER(si.gender) AS gender,
+    si.region,
+    si.highest_education,
     -- Transform: Convert '?' to NULL, standardize '10-20' format to '10-20%', keep valid values
     CASE 
-        WHEN imd_band = '?' THEN NULL
-        WHEN imd_band = '10-20' THEN '10-20%'
-        ELSE imd_band 
+        WHEN si.imd_band = '?' THEN NULL
+        WHEN si.imd_band = '10-20' THEN '10-20%'
+        ELSE si.imd_band 
     END AS imd_band,
-    age_band,
-    num_of_prev_attempts,
-    studied_credits,
-    UPPER(disability) AS disability,
-    INITCAP(final_result) AS final_result,
+    si.age_band,
+    si.num_of_prev_attempts,
+    si.studied_credits,
+    UPPER(si.disability) AS disability,
+    -- FIX: Use date_unregistration as authoritative source for withdrawal status
+    CASE 
+        WHEN sr.date_unregistration IS NOT NULL AND sr.date_unregistration != '?' THEN 'Withdrawn'
+        ELSE INITCAP(si.final_result)
+    END AS final_result,
     -- Quality Flag: Track if source explicitly marked as missing with '?'
-    CASE WHEN imd_band = '?' THEN TRUE ELSE FALSE END AS has_missing_imd_band
-FROM `ftw-week-07`.`01-raw`.student_info;
+    CASE WHEN si.imd_band = '?' THEN TRUE ELSE FALSE END AS has_missing_imd_band,
+    -- Quality Flag: Track if final_result was corrected based on registration data
+    CASE 
+        WHEN (sr.date_unregistration IS NOT NULL AND sr.date_unregistration != '?' AND si.final_result != 'Withdrawn')
+          OR (sr.date_unregistration = '?' AND si.final_result = 'Withdrawn')
+        THEN TRUE
+        ELSE FALSE
+    END AS had_withdrawal_corrected
+FROM `ftw-week-07`.`01-raw`.student_info si
+LEFT JOIN `ftw-week-07`.`01-raw`.student_registration sr
+    ON si.code_module = sr.code_module
+   AND si.code_presentation = sr.code_presentation
+   AND si.id_student = sr.id_student;
 
 
 -- ============================================================================
