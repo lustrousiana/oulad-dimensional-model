@@ -9,8 +9,10 @@ SELECT
     ) AS assessment_key,
 
     a.id_assessment,
+    a.code_module,
+    a.code_presentation,
     a.assessment_type,
-    a.due_day_offset AS date,
+    a.date,
     a.weight
 
-FROM {{ source('clean', 'assessments') }} AS a
+FROM {{ source('clean', 'assessments') }} a
