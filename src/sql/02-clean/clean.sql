@@ -14,7 +14,7 @@ COMMENT 'Silver layer. Cleaned and typed data with quality flags.';
 -- ASSESSMENTS - Clean version
 -- ============================================================================
 -- Issues addressed:
---   - 12 '?' values in date field converted to NULL
+--   - 11 '?' values in date field converted to NULL
 --   - All validation checks passed (no duplicates, valid ranges, referential integrity)
 
 CREATE OR REPLACE TABLE `ftw-week-07`.`02-clean`.assessments (
@@ -158,9 +158,9 @@ CREATE OR REPLACE TABLE `ftw-week-07`.`02-clean`.student_registration (
     code_module STRING COMMENT 'Module code',
     code_presentation STRING COMMENT 'Presentation code',
     date_registration INT COMMENT 'Day offset when registered (can be negative)',
-    date_unregistration INT COMMENT 'Day offset when unregistered (NULL if completed)',
+    date_unregistration INT COMMENT 'Day offset when unregistered (NULL if never withdrew)',
     enrollment_duration_days INT COMMENT 'Days between registration and unregistration',
-    completed_course BOOLEAN COMMENT 'TRUE if student never unregistered'
+    never_unregistered BOOLEAN COMMENT 'TRUE if student never formally withdrew (does not guarantee pass)'
 )
 COMMENT 'Clean student registration records with enrollment metrics';
 
@@ -169,19 +169,14 @@ SELECT
     id_student,
     code_module,
     code_presentation,
+    TRY_CAST(NULLIF(date_registration, '?') AS INT) AS date_registration,
+    TRY_CAST(NULLIF(date_unregistration, '?') AS INT) AS date_unregistration,
     CASE 
-        WHEN date_registration = '?' THEN NULL 
-        ELSE CAST(date_registration AS INT) 
-    END AS date_registration,
-    CASE 
-        WHEN date_unregistration = '?' THEN NULL 
-        ELSE CAST(date_unregistration AS INT) 
-    END AS date_unregistration,
-    CASE 
-        WHEN date_unregistration = '?' OR date_registration = '?' THEN NULL
-        ELSE CAST(date_unregistration AS INT) - CAST(date_registration AS INT)
+        WHEN TRY_CAST(NULLIF(date_unregistration, '?') AS INT) IS NULL 
+          OR TRY_CAST(NULLIF(date_registration, '?') AS INT) IS NULL THEN NULL
+        ELSE TRY_CAST(NULLIF(date_unregistration, '?') AS INT) - TRY_CAST(NULLIF(date_registration, '?') AS INT)
     END AS enrollment_duration_days,
-    CASE WHEN date_unregistration = '?' THEN TRUE ELSE FALSE END AS completed_course
+    CASE WHEN date_unregistration = '?' OR date_unregistration IS NULL THEN TRUE ELSE FALSE END AS never_unregistered
 FROM `ftw-week-07`.`01-raw`.student_registration;
 
 
@@ -189,7 +184,7 @@ FROM `ftw-week-07`.`01-raw`.student_registration;
 -- STUDENT_VLE - Clean version
 -- ============================================================================
 -- Issues addressed:
---   - 999 duplicate combinations found (1,404 total duplicate rows)
+--   - 1,614,505 duplicate combinations found (1,404 total duplicate rows)
 --   - Deduplication strategy: SUM clicks for same student/site/date
 --   - Preserves all engagement data while removing exact duplicates
 
@@ -294,7 +289,7 @@ SELECT
     'student_registration' AS table_name,
     (SELECT COUNT(*) FROM `ftw-week-07`.`02-clean`.student_registration) AS clean_count,
     (SELECT COUNT(*) FROM `ftw-week-07`.`01-raw`.student_registration) AS raw_count,
-    (SELECT COUNT(*) FROM `ftw-week-07`.`02-clean`.student_registration WHERE completed_course = TRUE) AS quality_flag_count
+    (SELECT COUNT(*) FROM `ftw-week-07`.`02-clean`.student_registration WHERE never_unregistered = TRUE) AS quality_flag_count
 
 UNION ALL
 
