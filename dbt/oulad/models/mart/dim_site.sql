@@ -9,6 +9,10 @@ SELECT
     ) AS site_key,
 
     v.id_site,
-    v.activity_type
+    v.code_module,
+    v.code_presentation,
+    v.activity_type,
+    v.week_from,
+    v.week_to
 
-FROM {{ source('clean', 'vle') }} AS v
+FROM {{ source('clean', 'vle') }} v
