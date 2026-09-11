@@ -1,0 +1,398 @@
+{
+  "datasets": [
+    {
+      "name": "49a28cb6",
+      "displayName": "01-KPI",
+      "queryLines": [
+        "SELECT ROUND(CORR(total_clicks, avg_score_weighted), 3) AS engagement_score_correlation\r\n",
+        "FROM `ftw-week-07`.`04-analytics`.tbl_engagement_performance\r\n",
+        "WHERE assessments_submitted > 0;"
+      ]
+    },
+    {
+      "name": "bb2ccf94",
+      "displayName": "01-Quintile-engagement",
+      "queryLines": [
+        "WITH base AS (\r\n",
+        "    SELECT *\r\n",
+        "    FROM `ftw-week-07`.`04-analytics`.tbl_engagement_performance\r\n",
+        "    WHERE assessments_submitted > 0\r\n",
+        "),\r\n",
+        "tiers AS (\r\n",
+        "    SELECT *, NTILE(5) OVER (ORDER BY total_clicks) AS engagement_quintile\r\n",
+        "    FROM base\r\n",
+        ")\r\n",
+        "SELECT\r\n",
+        "    engagement_quintile,\r\n",
+        "    CASE engagement_quintile\r\n",
+        "        WHEN 1 THEN '1 — Lowest'\r\n",
+        "        WHEN 5 THEN '5 — Highest'\r\n",
+        "        ELSE CAST(engagement_quintile AS STRING)\r\n",
+        "    END                                AS engagement_tier,\r\n",
+        "    COUNT(*)                           AS num_students,\r\n",
+        "    ROUND(AVG(total_clicks), 0)        AS avg_clicks_in_tier,\r\n",
+        "    ROUND(AVG(avg_score_weighted), 2)  AS avg_weighted_score\r\n",
+        "FROM tiers\r\n",
+        "GROUP BY engagement_quintile\r\n",
+        "ORDER BY engagement_quintile;"
+      ]
+    },
+    {
+      "name": "0f826212",
+      "displayName": "01-Engagement-outcome",
+      "queryLines": [
+        "SELECT\r\n",
+        "    final_result,\r\n",
+        "    COUNT(*)                          AS num_enrollments,\r\n",
+        "    ROUND(AVG(total_clicks), 0)       AS avg_total_clicks,\r\n",
+        "    ROUND(AVG(active_days), 1)        AS avg_active_days,\r\n",
+        "    ROUND(AVG(avg_score_weighted), 2) AS avg_weighted_score\r\n",
+        "FROM `ftw-week-07`.`04-analytics`.tbl_engagement_performance\r\n",
+        "GROUP BY final_result\r\n",
+        "ORDER BY\r\n",
+        "    CASE final_result\r\n",
+        "        WHEN 'Withdrawn'   THEN 0\r\n",
+        "        WHEN 'Fail'        THEN 1\r\n",
+        "        WHEN 'Pass'        THEN 2\r\n",
+        "        WHEN 'Distinction' THEN 3\r\n",
+        "    END;"
+      ]
+    }
+  ],
+  "relationshipGraphs": [
+    {
+      "sources": [
+        {
+          "name": "Untitled_dataset",
+          "datasetName": "49a28cb6"
+        },
+        {
+          "name": "Untitled_dataset_1",
+          "datasetName": "bb2ccf94"
+        },
+        {
+          "name": "Untitled_dataset_2",
+          "datasetName": "0f826212"
+        }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "b0e9fc98",
+      "displayName": "Overview",
+      "layout": [
+        {
+          "widget": {
+            "name": "e4b87385",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block\"><span style=\"font-size: 60px;line-height: 1.5;font-family: Tahoma;\">OULAD Student Success Dashboard</span></span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "454e2b16",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block;\">*Student Engagement vs. Performance*</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 2,
+            "width": 10,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "96333e31",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"font-size: 50px;line-height: 1.5;\">01</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 2,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "average-score-engagement-quintile",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_1__engagement_tier",
+                      "expression": "`Untitled_dataset_1`.`engagement_tier`"
+                    },
+                    {
+                      "name": "Untitled_dataset_1__avg_weighted_score",
+                      "expression": "`Untitled_dataset_1`.`avg_weighted_score`"
+                    },
+                    {
+                      "name": "Untitled_dataset_1__num_students",
+                      "expression": "`Untitled_dataset_1`.`num_students`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": {
+                  "value": "Average score by engagement quintile",
+                  "fields": []
+                },
+                "description": {
+                  "value": "*Higher engagement → higher average scores*",
+                  "fields": []
+                }
+              },
+              "version": 1,
+              "mark": {
+                "colors": [
+                  "#3182BD",
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 2
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 3
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 4
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 5
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 6
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 7
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 8
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 9
+                  },
+                  {
+                    "themeColorType": "visualizationColors",
+                    "position": 10
+                  }
+                ]
+              },
+              "widgetType": "combo",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_1__engagement_tier",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "1 — Lowest",
+                        "2",
+                        "3",
+                        "4",
+                        "5 — Highest"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "primary": {
+                    "fields": [
+                      {
+                        "fieldName": "Untitled_dataset_1__avg_weighted_score"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative"
+                    }
+                  },
+                  "secondary": {
+                    "fields": [
+                      {
+                        "fieldName": "Untitled_dataset_1__num_students"
+                      }
+                    ],
+                    "scale": {
+                      "type": "quantitative",
+                      "reverse": false
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 3,
+            "width": 5,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "average-engagement-final-outcome",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_2__final_result",
+                      "expression": "`Untitled_dataset_2`.`final_result`"
+                    },
+                    {
+                      "name": "Untitled_dataset_2__avg_total_clicks",
+                      "expression": "`Untitled_dataset_2`.`avg_total_clicks`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "showDescription": true,
+                "title": {
+                  "value": "Average Engagement by Final Outcome",
+                  "fields": []
+                },
+                "description": {
+                  "value": "*\"Withdrawn and failing students engaged far less\"*",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_2__final_result",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "custom-order",
+                      "orderedValues": [
+                        "Withdrawn",
+                        "Pass",
+                        "Fail",
+                        "Distinction"
+                      ]
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "Untitled_dataset_2__avg_total_clicks",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_2__final_result",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 7,
+            "y": 3,
+            "width": 5,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "71318a96",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"font-size:50px;line-height:1.5\">02</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 9,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "669a0c97",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block\">*title #2*</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 10,
+            "width": 10,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    },
+    {
+      "name": "ac29c448",
+      "displayName": "Untitled page 1",
+      "pageType": "PAGE_TYPE_CANVAS"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED",
+      "visualizationColorMappings": [
+        {
+          "value": "avg_weighted_score",
+          "color": "#077A9D"
+        }
+      ]
+    },
+    "applyModeEnabled": false
+  }
+}
