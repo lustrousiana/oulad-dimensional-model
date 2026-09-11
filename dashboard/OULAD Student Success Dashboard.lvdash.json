@@ -57,6 +57,34 @@
         "        WHEN 'Distinction' THEN 3\r\n",
         "    END;"
       ]
+    },
+    {
+      "name": "89e2bc14",
+      "displayName": "Untitled dataset",
+      "queryLines": [
+        ""
+      ]
+    },
+    {
+      "name": "6e1b5ea8",
+      "displayName": "04-Assessment-Failures",
+      "config": {
+        "version": "1.1",
+        "source": "-- =====================================================\r\n-- BUSINESS QUESTION:\r\n-- Which assessment types and modules have the highest failure rates?\r\n--\r\n-- Grain:\r\n-- One row per score per assessment\r\n--\r\n-- Sources:\r\n-- dim_assessment\r\n-- fact_assessment\r\n-- =====================================================\r\n\r\nWITH assessment_failure_rates AS (\r\n    SELECT\r\n        da.code_module,\r\n        da.assessment_type,\r\n        fa.score,\r\n        CASE\r\n            -- Scores below 40 are considered failures\r\n            WHEN fa.score < 40 THEN 1\r\n            -- Conditionally include NULLs based on parameter\r\n            WHEN fa.score IS NULL THEN 1\r\n            ELSE 0\r\n        END AS is_failure\r\n\r\n    FROM `ftw-week-07`.`03-mart`.fact_assessment fa\r\n    LEFT JOIN `ftw-week-07`.`03-mart`.dim_assessment da\r\n        ON fa.assessment_key = da.assessment_key\r\n)\r\n\r\nSELECT\r\n    code_module,\r\n    assessment_type,\r\n    COUNT(*) AS total_assessments,\r\n    SUM(CASE WHEN score IS NULL THEN 1 ELSE 0 END) AS null_scores,\r\n    ROUND(SUM(CASE WHEN score IS NULL THEN 1 ELSE 0 END) * 100 / COUNT(*), 2) AS null_pct,\r\n    SUM(is_failure) AS total_failures,\r\n    ROUND(SUM(is_failure) * 100 / COUNT(*), 2) AS failure_rate_pct,\r\n    ROUND(AVG(score), 2) AS average_score\r\nFROM assessment_failure_rates\r\nGROUP BY code_module, assessment_type\r\nORDER BY failure_rate_pct DESC",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)",
+            "comment": "Represents the total number of rows in the dataset. Use this measure to count all",
+            "displayName": "Count"
+          }
+        ]
+      }
     }
   ],
   "relationshipGraphs": [
@@ -73,6 +101,14 @@
         {
           "name": "Untitled_dataset_2",
           "datasetName": "0f826212"
+        },
+        {
+          "name": "Untitled_dataset_3",
+          "datasetName": "89e2bc14"
+        },
+        {
+          "name": "Untitled_dataset_1_1",
+          "datasetName": "6e1b5ea8"
         }
       ]
     }
@@ -371,6 +407,143 @@
             "y": 10,
             "width": 10,
             "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "a8229dd8",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"font-size:50px;line-height:1.5\">03</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 11,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "f123e548",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block\">*title #*3</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 12,
+            "width": 10,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "b757278e",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"font-size:50px;line-height:1.5\">04</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 13,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "4c698356",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block\">*Assessment Failure Rates*</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 13,
+            "width": 10,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "2df5f300",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_1_1__assessment_type",
+                      "expression": "`Untitled_dataset_1_1`.`assessment_type`"
+                    },
+                    {
+                      "name": "Untitled_dataset_1_1__code_module",
+                      "expression": "`Untitled_dataset_1_1`.`code_module`"
+                    },
+                    {
+                      "name": "Untitled_dataset_1_1__failure_rate_pct",
+                      "expression": "`Untitled_dataset_1_1`.`failure_rate_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Failure Rate by Assessment Type & Module",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "mark": {
+                "layout": "group"
+              },
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_1_1__code_module",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "Untitled_dataset_1_1__failure_rate_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_1_1__assessment_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "label": {
+                  "show": true
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 14,
+            "width": 10,
+            "height": 6
           }
         }
       ],
