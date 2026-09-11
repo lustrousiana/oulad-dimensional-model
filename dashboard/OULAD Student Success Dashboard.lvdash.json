@@ -186,6 +186,63 @@
         "GROUP BY se.final_result\n",
         "ORDER BY mean_clicks;"
       ]
+    },
+    {
+      "name": "3b002611",
+      "displayName": "03-student-activity-over-time",
+      "queryLines": [
+        "SELECT\r\n",
+        "    dse.code_module,\r\n",
+        "    dse.code_presentation,\r\n",
+        "    ds.activity_type,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN fa.activity_date < 0 THEN 0\r\n",
+        "        ELSE FLOOR(fa.activity_date / 7) + 1\r\n",
+        "    END AS course_week_number,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN fa.activity_date < 0 THEN 'Before course'\r\n",
+        "        ELSE CONCAT(\r\n",
+        "            'Week ',\r\n",
+        "            CAST(FLOOR(fa.activity_date / 7) + 1 AS INT)\r\n",
+        "        )\r\n",
+        "    END AS course_week,\r\n",
+        "\r\n",
+        "    SUM(fa.total_clicks) AS total_clicks\r\n",
+        "\r\n",
+        "FROM `ftw-week-07`.`03-mart`.fact_activity AS fa\r\n",
+        "\r\n",
+        "JOIN `ftw-week-07`.`03-mart`.dim_student_enrollment AS dse\r\n",
+        "    ON fa.student_enrollment_key = dse.student_enrollment_key\r\n",
+        "\r\n",
+        "JOIN `ftw-week-07`.`03-mart`.dim_site AS ds\r\n",
+        "    ON fa.site_key = ds.site_key\r\n",
+        "\r\n",
+        "GROUP BY\r\n",
+        "    dse.code_module,\r\n",
+        "    dse.code_presentation,\r\n",
+        "    ds.activity_type,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN fa.activity_date < 0 THEN 0\r\n",
+        "        ELSE FLOOR(fa.activity_date / 7) + 1\r\n",
+        "    END,\r\n",
+        "\r\n",
+        "    CASE\r\n",
+        "        WHEN fa.activity_date < 0 THEN 'Before course'\r\n",
+        "        ELSE CONCAT(\r\n",
+        "            'Week ',\r\n",
+        "            CAST(FLOOR(fa.activity_date / 7) + 1 AS INT)\r\n",
+        "        )\r\n",
+        "    END\r\n",
+        "\r\n",
+        "ORDER BY\r\n",
+        "    dse.code_module,\r\n",
+        "    dse.code_presentation,\r\n",
+        "    course_week_number,\r\n",
+        "    ds.activity_type;"
+      ]
     }
   ],
   "relationshipGraphs": [
@@ -218,6 +275,10 @@
         {
           "name": "Untitled_dataset_6",
           "datasetName": "3cab0dc3"
+        },
+        {
+          "name": "Untitled_dataset_7",
+          "datasetName": "3b002611"
         }
       ]
     }
@@ -724,7 +785,7 @@
             "name": "0629bb6d",
             "queries": [
               {
-                "name": "dashboards/01f1add5ab3d168eb35687c8f47b9220/datasets/2929fd6d7ae84f039b06a3973775956b_code_module",
+                "name": "dashboards/01f1add12c701e279b79ef07ec4f72f1/datasets/01f1adecbdc21eec91bff6a6bf53dcdc_code_module",
                 "query": {
                   "datasetName": "ffb28492",
                   "fields": [
@@ -751,7 +812,7 @@
                 "fields": [
                   {
                     "fieldName": "code_module",
-                    "queryName": "dashboards/01f1add5ab3d168eb35687c8f47b9220/datasets/2929fd6d7ae84f039b06a3973775956b_code_module"
+                    "queryName": "dashboards/01f1add12c701e279b79ef07ec4f72f1/datasets/01f1adecbdc21eec91bff6a6bf53dcdc_code_module"
                   }
                 ]
               }
@@ -896,6 +957,150 @@
             "x": 2,
             "y": 24,
             "width": 4,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "b2eb1bd9",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"font-size:50px;line-height:1.5\">03</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 30,
+            "width": 2,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "81405a4e",
+            "multilineTextboxSpec": {
+              "lines": [
+                "<span style=\"text-align:center;display:block;\">*How does student activity change throughout a course?*</span>"
+              ]
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 30,
+            "width": 10,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "4c0bd848",
+            "queries": [
+              {
+                "name": "dashboards/01f1add12c701e279b79ef07ec4f72f1/datasets/f43c9dd8409147c6b73c8da8389171a7_activity_type",
+                "query": {
+                  "datasetName": "3b002611",
+                  "fields": [
+                    {
+                      "name": "activity_type",
+                      "expression": "`activity_type`"
+                    },
+                    {
+                      "name": "activity_type_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "activity_type",
+                    "queryName": "dashboards/01f1add12c701e279b79ef07ec4f72f1/datasets/f43c9dd8409147c6b73c8da8389171a7_activity_type"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 31,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "student-activity-course",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_7__code_presentation",
+                      "expression": "`Untitled_dataset_7`.`code_presentation`"
+                    },
+                    {
+                      "name": "Untitled_dataset_7__course_week_number",
+                      "expression": "`Untitled_dataset_7`.`course_week_number`"
+                    },
+                    {
+                      "name": "sum(Untitled_dataset_7__total_clicks)",
+                      "expression": "SUM(`Untitled_dataset_7`.`total_clicks`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Student Activity Throughout A Course",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_7__course_week_number",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "y": {
+                  "fieldName": "sum(Untitled_dataset_7__total_clicks)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_7__code_presentation",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 32,
+            "width": 10,
             "height": 6
           }
         }
