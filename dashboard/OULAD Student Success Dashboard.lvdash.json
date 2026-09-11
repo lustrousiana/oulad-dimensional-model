@@ -57,6 +57,135 @@
         "        WHEN 'Distinction' THEN 3\r\n",
         "    END;"
       ]
+    },
+    {
+      "name": "2cbb7bee",
+      "displayName": "02-withdrawal_by_attribute",
+      "queryLines": [
+        "WITH base AS (\n",
+        "    SELECT\n",
+        "        final_result,\n",
+        "        date_unregistration,\n",
+        "        gender,\n",
+        "        region,\n",
+        "        highest_education,\n",
+        "        age_band,\n",
+        "        disability,\n",
+        "        COALESCE(CASE WHEN imd_band = '10-20' THEN '10-20%' ELSE imd_band END,\n",
+        "                 '(not recorded)')                                 AS imd_band,\n",
+        "        CASE WHEN num_of_prev_attempts = 0 THEN '0 - first attempt'\n",
+        "             WHEN num_of_prev_attempts = 1 THEN '1 previous'\n",
+        "             WHEN num_of_prev_attempts = 2 THEN '2 previous'\n",
+        "             ELSE '3 or more' END                                  AS attempts_band,\n",
+        "        CASE WHEN studied_credits <=  60 THEN 'a. 30-60 (light)'\n",
+        "             WHEN studied_credits <= 120 THEN 'b. 61-120 (standard)'\n",
+        "             WHEN studied_credits <= 180 THEN 'c. 121-180 (heavy)'\n",
+        "             ELSE 'd. 181+ (very heavy)' END                       AS credits_band\n",
+        "    FROM `ftw-week-07`.`03-mart`.dim_student_enrollment\n",
+        "),\n",
+        "baseline AS (\n",
+        "    SELECT AVG(CASE WHEN final_result = 'Withdrawn' THEN 1.0 ELSE 0.0 END) AS rate\n",
+        "    FROM base\n",
+        "),\n",
+        "unpivoted AS (\n",
+        "    SELECT 'Gender'            AS attribute, gender            AS value, final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Age band',             age_band,                   final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Disability',           disability,                 final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Prior education',      highest_education,          final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Deprivation band',     imd_band,                   final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Region',               region,                     final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Previous attempts',    attempts_band,              final_result, date_unregistration FROM base\n",
+        "    UNION ALL SELECT 'Study load',           credits_band,               final_result, date_unregistration FROM base\n",
+        ")\n",
+        "SELECT\n",
+        "    u.attribute,\n",
+        "    u.value,\n",
+        "    COUNT(*)                                                            AS enrollments,\n",
+        "    SUM(CASE WHEN u.final_result = 'Withdrawn' THEN 1 ELSE 0 END)       AS withdrawn,\n",
+        " \n",
+        "    -- WHO withdraws\n",
+        "    ROUND(100.0 * AVG(CASE WHEN u.final_result = 'Withdrawn'\n",
+        "                           THEN 1.0 ELSE 0.0 END), 1)                   AS withdrawal_rate_pct,\n",
+        "    ROUND(100.0 * (AVG(CASE WHEN u.final_result = 'Withdrawn'\n",
+        "                            THEN 1.0 ELSE 0.0 END) - b.rate), 1)        AS pts_vs_baseline,\n",
+        " \n",
+        "    -- WHEN they withdraw. The inner CASE returns NULL for non-withdrawals and\n",
+        "    -- AVG ignores NULLs, so these are computed over withdrawals only.\n",
+        "    ROUND(AVG(CASE WHEN u.final_result = 'Withdrawn'\n",
+        "                   THEN u.date_unregistration END), 1)                  AS mean_withdrawal_day,\n",
+        "    ROUND(100.0 * AVG(CASE WHEN u.final_result = 'Withdrawn'\n",
+        "                           THEN CASE WHEN u.date_unregistration <= 28\n",
+        "                                     THEN 1.0 ELSE 0.0 END END), 1)     AS pct_gone_by_week_4\n",
+        "FROM unpivoted u\n",
+        "CROSS JOIN baseline b\n",
+        "GROUP BY u.attribute, u.value, b.rate\n",
+        "HAVING COUNT(*) >= 100       -- suppress groups too small to read a rate from\n",
+        "ORDER BY u.attribute, withdrawal_rate_pct DESC;"
+      ]
+    },
+    {
+      "name": "ffb28492",
+      "displayName": "02-withdrawal_by_module",
+      "queryLines": [
+        "SELECT\n",
+        "    code_module,\n",
+        "    code_presentation,\n",
+        "    code_module || ' ' || code_presentation                        AS module_presentation,\n",
+        "    COUNT(*)                                                       AS enrollments,\n",
+        "    SUM(CASE WHEN final_result = 'Withdrawn'   THEN 1 ELSE 0 END)  AS withdrawn,\n",
+        "    SUM(CASE WHEN final_result = 'Fail'        THEN 1 ELSE 0 END)  AS failed,\n",
+        "    SUM(CASE WHEN final_result = 'Pass'        THEN 1 ELSE 0 END)  AS passed,\n",
+        "    SUM(CASE WHEN final_result = 'Distinction' THEN 1 ELSE 0 END)  AS distinction,\n",
+        "    ROUND(100.0 * AVG(CASE WHEN final_result = 'Withdrawn'\n",
+        "                           THEN 1.0 ELSE 0.0 END), 1)              AS withdrawal_rate_pct,\n",
+        "    ROUND(AVG(CASE WHEN final_result = 'Withdrawn'\n",
+        "                   THEN date_unregistration END), 1)               AS mean_withdrawal_day\n",
+        "FROM `ftw-week-07`.`03-mart`.dim_student_enrollment\n",
+        "GROUP BY code_module, code_presentation\n",
+        "ORDER BY withdrawal_rate_pct DESC;"
+      ]
+    },
+    {
+      "name": "2204551c",
+      "displayName": "02-withdrawal_timing",
+      "queryLines": [
+        "SELECT\n",
+        "    CASE WHEN date_unregistration IS NULL  THEN 'no date recorded'\n",
+        "         WHEN date_unregistration <   0    THEN 'before module start'\n",
+        "         WHEN date_unregistration <=  28   THEN 'weeks 1-4'\n",
+        "         WHEN date_unregistration <=  84   THEN 'weeks 5-12'\n",
+        "         WHEN date_unregistration <= 168   THEN 'weeks 13-24'\n",
+        "         ELSE 'week 25+' END                              AS withdrawal_window,\n",
+        "    COUNT(*)                                                 AS withdrawals,\n",
+        "    ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1)       AS pct_of_withdrawals\n",
+        "FROM `ftw-week-07`.`03-mart`.dim_student_enrollment\n",
+        "WHERE final_result = 'Withdrawn'\n",
+        "GROUP BY 1\n",
+        "ORDER BY 1;"
+      ]
+    },
+    {
+      "name": "3cab0dc3",
+      "displayName": "02-engagement_by_outcome",
+      "queryLines": [
+        "WITH clicks AS (\n",
+        "    SELECT student_enrollment_key, SUM(total_clicks) AS total_clicks\n",
+        "    FROM `ftw-week-07`.`03-mart`.fact_activity\n",
+        "    GROUP BY student_enrollment_key\n",
+        ")\n",
+        "SELECT\n",
+        "    se.final_result,\n",
+        "    COUNT(*)                                                    AS enrollments,\n",
+        "    SUM(CASE WHEN c.total_clicks IS NULL THEN 1 ELSE 0 END)     AS never_engaged,\n",
+        "    ROUND(100.0 * AVG(CASE WHEN c.total_clicks IS NULL\n",
+        "                           THEN 1.0 ELSE 0.0 END), 1)           AS pct_never_engaged,\n",
+        "    ROUND(AVG(COALESCE(c.total_clicks, 0)))                     AS mean_clicks,\n",
+        "    ROUND(PERCENTILE(COALESCE(c.total_clicks, 0), 0.5))         AS median_clicks\n",
+        "FROM `ftw-week-07`.`03-mart`.dim_student_enrollment se\n",
+        "LEFT JOIN clicks c ON se.student_enrollment_key = c.student_enrollment_key\n",
+        "GROUP BY se.final_result\n",
+        "ORDER BY mean_clicks;"
+      ]
     }
   ],
   "relationshipGraphs": [
@@ -73,6 +202,22 @@
         {
           "name": "Untitled_dataset_2",
           "datasetName": "0f826212"
+        },
+        {
+          "name": "Untitled_dataset_3",
+          "datasetName": "2cbb7bee"
+        },
+        {
+          "name": "Untitled_dataset_4",
+          "datasetName": "ffb28492"
+        },
+        {
+          "name": "Untitled_dataset_5",
+          "datasetName": "2204551c"
+        },
+        {
+          "name": "Untitled_dataset_6",
+          "datasetName": "3cab0dc3"
         }
       ]
     }
@@ -362,15 +507,396 @@
             "name": "669a0c97",
             "multilineTextboxSpec": {
               "lines": [
-                "<span style=\"text-align:center;display:block\">*title #2*</span>"
+                "<span style=\"text-align:center;display:block\">*What patterns appear among students who withdraw?*</span>"
               ]
             }
           },
           "position": {
             "x": 2,
-            "y": 10,
+            "y": 9,
             "width": 10,
             "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "135fa764",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_3__value",
+                      "expression": "`Untitled_dataset_3`.`value`"
+                    },
+                    {
+                      "name": "Untitled_dataset_3__withdrawal_rate_pct",
+                      "expression": "`Untitled_dataset_3`.`withdrawal_rate_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Withdrawal Rate by Attribute",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_3__value",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "Untitled_dataset_3__withdrawal_rate_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_3__value",
+                  "legend": {
+                    "hide": true
+                  },
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "y-reversed"
+                    }
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 11,
+            "width": 10,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "attribute",
+            "queries": [
+              {
+                "name": "dashboards/01f1add5ab3d168eb35687c8f47b9220/datasets/a297eafda26841b090c55283bc818220_attribute",
+                "query": {
+                  "datasetName": "2cbb7bee",
+                  "fields": [
+                    {
+                      "name": "attribute",
+                      "expression": "`attribute`"
+                    },
+                    {
+                      "name": "attribute_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "selection": {
+                "defaultSelection": {
+                  "values": {
+                    "dataType": "STRING",
+                    "values": [
+                      {
+                        "value": "Study load"
+                      }
+                    ]
+                  }
+                }
+              },
+              "disallowAll": false,
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "attribute",
+                  "fields": []
+                }
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "attribute",
+                    "queryName": "dashboards/01f1add5ab3d168eb35687c8f47b9220/datasets/a297eafda26841b090c55283bc818220_attribute"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 10,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "9f68c10b",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_4__code_module",
+                      "expression": "`Untitled_dataset_4`.`code_module`"
+                    },
+                    {
+                      "name": "Untitled_dataset_4__module_presentation",
+                      "expression": "`Untitled_dataset_4`.`module_presentation`"
+                    },
+                    {
+                      "name": "Untitled_dataset_4__withdrawal_rate_pct",
+                      "expression": "`Untitled_dataset_4`.`withdrawal_rate_pct`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Withdrawal Rate by Module",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_4__module_presentation",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "Untitled_dataset_4__withdrawal_rate_pct",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_4__code_module",
+                  "legend": {
+                    "hide": true
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 18,
+            "width": 10,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "0629bb6d",
+            "queries": [
+              {
+                "name": "dashboards/01f1add5ab3d168eb35687c8f47b9220/datasets/2929fd6d7ae84f039b06a3973775956b_code_module",
+                "query": {
+                  "datasetName": "ffb28492",
+                  "fields": [
+                    {
+                      "name": "code_module",
+                      "expression": "`code_module`"
+                    },
+                    {
+                      "name": "code_module_associativity",
+                      "expression": "COUNT_IF(`associative_filter_predicate_group`)"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "frame": {
+                "showTitle": true
+              },
+              "widgetType": "filter-single-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "code_module",
+                    "queryName": "dashboards/01f1add5ab3d168eb35687c8f47b9220/datasets/2929fd6d7ae84f039b06a3973775956b_code_module"
+                  }
+                ]
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 17,
+            "width": 4,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "7f5680b0",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_5__withdrawal_window",
+                      "expression": "`Untitled_dataset_5`.`withdrawal_window`"
+                    },
+                    {
+                      "name": "Untitled_dataset_5__pct_of_withdrawals",
+                      "expression": "`Untitled_dataset_5`.`pct_of_withdrawals`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "When Students Withdraw",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_5__withdrawal_window",
+                  "scale": {
+                    "type": "categorical",
+                    "sort": {
+                      "by": "natural-order"
+                    }
+                  }
+                },
+                "y": {
+                  "fieldName": "Untitled_dataset_5__pct_of_withdrawals",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_5__withdrawal_window",
+                  "legend": {
+                    "hide": true
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 24,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "498f5734",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "fields": [
+                    {
+                      "name": "Untitled_dataset_6__final_result",
+                      "expression": "`Untitled_dataset_6`.`final_result`"
+                    },
+                    {
+                      "name": "Untitled_dataset_6__mean_clicks",
+                      "expression": "`Untitled_dataset_6`.`mean_clicks`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Engagement by Final Outcome",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "Untitled_dataset_6__final_result",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "Untitled_dataset_6__mean_clicks",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                },
+                "color": {
+                  "fieldName": "Untitled_dataset_6__final_result",
+                  "legend": {
+                    "hide": true
+                  },
+                  "scale": {
+                    "type": "categorical"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 2,
+            "y": 24,
+            "width": 4,
+            "height": 6
           }
         }
       ],
