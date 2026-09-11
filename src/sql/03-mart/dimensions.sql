@@ -53,7 +53,7 @@ SELECT
     a.code_module,
     a.code_presentation,
     a.assessment_type,
-    a.date,
+    a.due_day_offset,
     a.weight
 
 FROM `ftw-week-07`.`02-clean`.assessments a;
