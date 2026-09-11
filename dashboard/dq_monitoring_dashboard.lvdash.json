@@ -1,0 +1,1021 @@
+{
+  "datasets": [
+    {
+      "name": "dataset1",
+      "displayName": "Data Quality Metrics",
+      "config": {
+        "version": "1.1",
+        "source": "`ftw-week-07`.`01-raw`.v_dq_latest",
+        "dimensions": [
+          {
+            "expr": "source.*"
+          }
+        ],
+        "measures": [
+          {
+            "name": "count",
+            "expr": "COUNT(*)",
+            "displayName": "Count"
+          },
+          {
+            "name": "checks_run",
+            "expr": "COUNT(*)",
+            "displayName": "Checks Run"
+          },
+          {
+            "name": "pass_count",
+            "expr": "COUNT_IF(status = 'PASS')",
+            "displayName": "Pass Count"
+          },
+          {
+            "name": "warn_count",
+            "expr": "COUNT_IF(status = 'WARN')",
+            "displayName": "Warn Count"
+          },
+          {
+            "name": "fail_count_total",
+            "expr": "COUNT_IF(status = 'FAIL')",
+            "displayName": "Fail Count"
+          },
+          {
+            "name": "pass_rate_pct",
+            "expr": "(COUNT_IF(status = 'PASS' AND severity <> 'INFO') * 100.0) / NULLIF(COUNT_IF(severity <> 'INFO'), 0)",
+            "displayName": "Pass Rate %"
+          },
+          {
+            "name": "total_failures",
+            "expr": "SUM(fail_count)",
+            "displayName": "Total Failures"
+          },
+          {
+            "name": "latest_check_time",
+            "expr": "MAX(executed_at)",
+            "displayName": "Latest Check Time"
+          }
+        ]
+      }
+    }
+  ],
+  "pages": [
+    {
+      "name": "page1",
+      "displayName": "v_dq_latest",
+      "layout": [
+        {
+          "widget": {
+            "name": "table1",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "dataset",
+                      "expression": "`dataset`"
+                    },
+                    {
+                      "name": "check_name",
+                      "expression": "`check_name`"
+                    },
+                    {
+                      "name": "check_type",
+                      "expression": "`check_type`"
+                    },
+                    {
+                      "name": "fail_count",
+                      "expression": "`fail_count`"
+                    },
+                    {
+                      "name": "total_count",
+                      "expression": "`total_count`"
+                    },
+                    {
+                      "name": "fail_pct",
+                      "expression": "`fail_pct`"
+                    },
+                    {
+                      "name": "owner",
+                      "expression": "`owner`"
+                    },
+                    {
+                      "name": "details",
+                      "expression": "`details`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`status` IN ('FAIL', 'WARN')"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "4&#x2E; Open Issues - Failures &amp; Warnings",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "rowsPerPage": 25,
+              "displayRowNumbers": false,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "status",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "dataset",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "check_name",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "check_type",
+                    "useForSearch": false,
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "fail_count",
+                    "useForSearch": false,
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0"
+                    },
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "total_count",
+                    "useForSearch": false,
+                    "format": {
+                      "type": "numeral.js",
+                      "format": "0"
+                    },
+                    "actions": {
+                      "hover": {
+                        "type": "tooltip",
+                        "tooltipTemplate": "{{ @ }}"
+                      }
+                    }
+                  },
+                  {
+                    "fieldName": "fail_pct"
+                  },
+                  {
+                    "fieldName": "owner"
+                  },
+                  {
+                    "fieldName": "details"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 8,
+            "width": 12,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "health_raw",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "layer",
+                      "expression": "`layer`"
+                    },
+                    {
+                      "name": "measure(pass_rate_pct)",
+                      "expression": "MEASURE(`pass_rate_pct`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`layer` IN ('raw')"
+                    },
+                    {
+                      "expression": "`severity` NOT IN ('INFO')"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`layer`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Raw: 92.3% Pass",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(pass_rate_pct)",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    },
+                    "abbreviation": "none"
+                  },
+                  "formatTemplate": "{{ @formatted }}%"
+                },
+                "period": {
+                  "fieldName": "layer",
+                  "hideLabels": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "health_clean",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "layer",
+                      "expression": "`layer`"
+                    },
+                    {
+                      "name": "measure(pass_rate_pct)",
+                      "expression": "MEASURE(`pass_rate_pct`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`layer` IN ('clean')"
+                    },
+                    {
+                      "expression": "`severity` NOT IN ('INFO')"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`layer`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Clean: 88.6% Pass",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(pass_rate_pct)",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    },
+                    "abbreviation": "none"
+                  },
+                  "formatTemplate": "{{ @formatted }}%"
+                },
+                "period": {
+                  "fieldName": "layer",
+                  "hideLabels": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 1,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "health_mart",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "layer",
+                      "expression": "`layer`"
+                    },
+                    {
+                      "name": "measure(pass_rate_pct)",
+                      "expression": "MEASURE(`pass_rate_pct`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`layer` IN ('mart')"
+                    },
+                    {
+                      "expression": "`severity` NOT IN ('INFO')"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`layer`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "Mart: 98.1% Pass",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(pass_rate_pct)",
+                  "format": {
+                    "type": "number-plain",
+                    "decimalPlaces": {
+                      "type": "exact",
+                      "places": 1
+                    },
+                    "abbreviation": "none"
+                  },
+                  "formatTemplate": "{{ @formatted }}%"
+                },
+                "period": {
+                  "fieldName": "layer",
+                  "hideLabels": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 1,
+            "width": 4,
+            "height": 3
+          }
+        },
+        {
+          "widget": {
+            "name": "failures_by_dataset",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "dataset",
+                      "expression": "`dataset`"
+                    },
+                    {
+                      "name": "measure(count)",
+                      "expression": "MEASURE(`count`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`status` IN ('FAIL', 'WARN')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "2&#x2E; Failures by Dataset",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "dataset",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 4,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "failures_by_check_type",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "check_type",
+                      "expression": "`check_type`"
+                    },
+                    {
+                      "name": "measure(count)",
+                      "expression": "MEASURE(`count`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`status` IN ('FAIL', 'WARN')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "3&#x2E; Failures by Check Type",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "check_type",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(count)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 6,
+            "y": 4,
+            "width": 6,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "freshness_raw",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "layer",
+                      "expression": "`layer`"
+                    },
+                    {
+                      "name": "measure(latest_check_time)",
+                      "expression": "MEASURE(`latest_check_time`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`layer` IN ('raw')"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`layer`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "8&#x2E; Freshness - Raw",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(latest_check_time)",
+                  "format": {
+                    "type": "date-time",
+                    "date": "year-month-day",
+                    "time": "locale-hour-minute-second"
+                  }
+                },
+                "period": {
+                  "fieldName": "layer",
+                  "hideLabels": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 28,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "freshness_clean",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "layer",
+                      "expression": "`layer`"
+                    },
+                    {
+                      "name": "measure(latest_check_time)",
+                      "expression": "MEASURE(`latest_check_time`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`layer` IN ('clean')"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`layer`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "8&#x2E; Freshness - Clean",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(latest_check_time)",
+                  "format": {
+                    "type": "date-time",
+                    "date": "year-month-day",
+                    "time": "locale-hour-minute-second"
+                  }
+                },
+                "period": {
+                  "fieldName": "layer",
+                  "hideLabels": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 4,
+            "y": 28,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "freshness_mart",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "layer",
+                      "expression": "`layer`"
+                    },
+                    {
+                      "name": "measure(latest_check_time)",
+                      "expression": "MEASURE(`latest_check_time`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`layer` IN ('mart')"
+                    }
+                  ],
+                  "disaggregated": false,
+                  "orders": [
+                    {
+                      "direction": "DESC",
+                      "expression": "`layer`"
+                    }
+                  ]
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "8&#x2E; Freshness - Mart",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "counter",
+              "encodings": {
+                "value": {
+                  "fieldName": "measure(latest_check_time)",
+                  "format": {
+                    "type": "date-time",
+                    "date": "year-month-day",
+                    "time": "locale-hour-minute-second"
+                  }
+                },
+                "period": {
+                  "fieldName": "layer",
+                  "hideLabels": false
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 8,
+            "y": 28,
+            "width": 4,
+            "height": 2
+          }
+        },
+        {
+          "widget": {
+            "name": "measurements_panel",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "dataset",
+                      "expression": "`dataset`"
+                    },
+                    {
+                      "name": "check_name",
+                      "expression": "`check_name`"
+                    },
+                    {
+                      "name": "metric_value",
+                      "expression": "`metric_value`"
+                    },
+                    {
+                      "name": "details",
+                      "expression": "`details`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`severity` IN ('INFO')"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "5&#x2E; Measurements &amp; Context (INFO)",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "dataset"
+                  },
+                  {
+                    "fieldName": "check_name"
+                  },
+                  {
+                    "fieldName": "metric_value"
+                  },
+                  {
+                    "fieldName": "details"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 14,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "trend_view",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "run_id",
+                      "expression": "`run_id`"
+                    },
+                    {
+                      "name": "measure(pass_rate_pct)",
+                      "expression": "MEASURE(`pass_rate_pct`)"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`severity` NOT IN ('INFO')"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "7&#x2E; Trend Over Time",
+                  "fields": []
+                }
+              },
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "run_id",
+                  "scale": {
+                    "type": "categorical"
+                  }
+                },
+                "y": {
+                  "fieldName": "measure(pass_rate_pct)",
+                  "scale": {
+                    "type": "quantitative"
+                  }
+                }
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 23,
+            "width": 12,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "reconciliation_metric",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "dataset1",
+                  "fields": [
+                    {
+                      "name": "check_name",
+                      "expression": "`check_name`"
+                    },
+                    {
+                      "name": "status",
+                      "expression": "`status`"
+                    },
+                    {
+                      "name": "metric_value",
+                      "expression": "`metric_value`"
+                    },
+                    {
+                      "name": "details",
+                      "expression": "`details`"
+                    }
+                  ],
+                  "filters": [
+                    {
+                      "expression": "`check_name` IN ('reconciliation_total_clicks', 'clicks_raw_to_mart')"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "frame": {
+                "showTitle": true,
+                "title": {
+                  "value": "6&#x2E; Cross-Layer Reconciliation",
+                  "fields": []
+                }
+              },
+              "version": 2,
+              "widgetType": "table",
+              "encodings": {
+                "columns": [
+                  {
+                    "fieldName": "check_name"
+                  },
+                  {
+                    "fieldName": "status"
+                  },
+                  {
+                    "fieldName": "metric_value"
+                  },
+                  {
+                    "fieldName": "details"
+                  }
+                ]
+              },
+              "data": {
+                "queryName": "main_query"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 19,
+            "width": 12,
+            "height": 4
+          }
+        },
+        {
+          "widget": {
+            "name": "health_status_text",
+            "multilineTextboxSpec": {
+              "lines": [
+                "## 1. Data Quality Health Status - Is it safe to trust the data right now?"
+              ]
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 12,
+            "height": 1
+          }
+        }
+      ],
+      "pageType": "PAGE_TYPE_CANVAS",
+      "layoutVersion": "GRID_V1"
+    }
+  ],
+  "uiSettings": {
+    "theme": {
+      "widgetHeaderAlignment": "ALIGNMENT_UNSPECIFIED"
+    },
+    "applyModeEnabled": false
+  }
+}
